@@ -1,0 +1,383 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: journals
+    description: Private Gemini journal conversations
+  - name: insights
+    description: Private saved insight cards
+  - name: dashboard
+    description: Personal journal summary
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /journals:
+    get:
+      operationId: listJournals
+      tags: [journals]
+      summary: List the signed-in user's journals
+      security:
+        - firebaseAuth: []
+      responses:
+        "200":
+          description: Private journals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Journal"
+    post:
+      operationId: createJournal
+      tags: [journals]
+      summary: Create a private journal
+      security:
+        - firebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalInput"
+      responses:
+        "201":
+          description: Created journal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Journal"
+  /journals/{journalId}:
+    get:
+      operationId: getJournal
+      tags: [journals]
+      summary: Get one private journal
+      security:
+        - firebaseAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JournalId"
+      responses:
+        "200":
+          description: Private journal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Journal"
+        "404":
+          description: Journal not found
+    patch:
+      operationId: updateJournal
+      tags: [journals]
+      summary: Update a private journal title
+      security:
+        - firebaseAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JournalId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalUpdate"
+      responses:
+        "200":
+          description: Updated journal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Journal"
+    delete:
+      operationId: deleteJournal
+      tags: [journals]
+      summary: Delete a private journal
+      security:
+        - firebaseAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JournalId"
+      responses:
+        "204":
+          description: Deleted
+  /journals/{journalId}/messages:
+    post:
+      operationId: sendJournalMessage
+      tags: [journals]
+      summary: Continue a private Gemini conversation
+      security:
+        - firebaseAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JournalId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "200":
+          description: Journal with the appended user and Gemini messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Journal"
+  /insights:
+    get:
+      operationId: listInsights
+      tags: [insights]
+      summary: List the signed-in user's insight cards
+      security:
+        - firebaseAuth: []
+      responses:
+        "200":
+          description: Private insight cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Insight"
+    post:
+      operationId: createInsight
+      tags: [insights]
+      summary: Save a private insight card
+      security:
+        - firebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightInput"
+      responses:
+        "201":
+          description: Created insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insight"
+  /insights/{insightId}:
+    patch:
+      operationId: updateInsight
+      tags: [insights]
+      summary: Update a private insight card
+      security:
+        - firebaseAuth: []
+      parameters:
+        - $ref: "#/components/parameters/InsightId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightUpdate"
+      responses:
+        "200":
+          description: Updated insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insight"
+    delete:
+      operationId: deleteInsight
+      tags: [insights]
+      summary: Delete a private insight card
+      security:
+        - firebaseAuth: []
+      parameters:
+        - $ref: "#/components/parameters/InsightId"
+      responses:
+        "204":
+          description: Deleted
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get a private journal summary
+      security:
+        - firebaseAuth: []
+      responses:
+        "200":
+          description: Private summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+components:
+  securitySchemes:
+    firebaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token
+  parameters:
+    JournalId:
+      name: journalId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    InsightId:
+      name: insightId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Journal:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+      required: [id, title, createdAt, updatedAt, messages]
+    JournalInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required: [title]
+    JournalUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required: [title]
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum: [user, model]
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, role, text, createdAt]
+    MessageInput:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 10000
+      required: [text]
+    Insight:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [open, done]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, body, tags, status, createdAt, updatedAt]
+    InsightInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 8
+        status:
+          type: string
+          enum: [open, done]
+      required: [title, body, tags, status]
+    InsightUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 8
+        status:
+          type: string
+          enum: [open, done]
+    DashboardSummary:
+      type: object
+      properties:
+        journalCount:
+          type: number
+        messageCount:
+          type: number
+        openInsightCount:
+          type: number
+        latestJournal:
+          anyOf:
+            - $ref: "#/components/schemas/Journal"
+            - type: "null"
+      required: [journalCount, messageCount, openInsightCount, latestJournal]
+
