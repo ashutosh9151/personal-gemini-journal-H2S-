@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Personal Gemini Journal"
+description = "A secure, authenticated journaling and brainstorming space powered by Gemini, with private per-user conversations, Firestore persistence, and actionable insight cards."
+version = "1.0.0"
+id = "artifacts/personal-gemini-journal"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25491
+
+[services.development]
+run = "pnpm --filter @workspace/personal-gemini-journal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/personal-gemini-journal", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/personal-gemini-journal/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25491"
+BASE_PATH = "/"
